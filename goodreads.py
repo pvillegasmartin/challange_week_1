@@ -113,7 +113,9 @@ def scraper():
 
 def preprocessing(data):
     data = pd.read_csv(data, sep='&')
+    #TODO think which columns can't have None values and drop na
     data = data.dropna(subset=['avg_rating'])
+    data = data.drop_duplicates(subset=['title'])
     data = data.reset_index(drop=True)
     # MinMax Normilization on avg_rating and scaling from 0 to 10 and saving it into the minmax_norm_rating
     data['minmax_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].min()) / (\
