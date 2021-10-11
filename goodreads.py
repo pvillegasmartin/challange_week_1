@@ -92,11 +92,13 @@ def bookscraper(url):
 
 def scraper():
     base_url = 'https://www.goodreads.com'
-    df = pd.DataFrame(columns=["url", "title","author","num_reviews","num_ratings","avg_rating","num_pages","original_publish_year","series","genres","awards","places"])
-    for i in range(1,38):
+
+    for i in range(20,38):
+        df = pd.DataFrame(columns=["url", "title", "author", "num_reviews", "num_ratings", "avg_rating", "num_pages",
+                                   "original_publish_year", "series", "genres", "awards", "places"])
         page = requests.get(f'https://www.goodreads.com/list/show/47.Best_Dystopian_and_Post_Apocalyptic_Fiction?page={i}')
         soup = BeautifulSoup(page.content, 'html.parser')
-
+        print(i)
         book_titles = soup.find_all('a', class_="bookTitle")
         for book in book_titles:
             try:
@@ -107,10 +109,26 @@ def scraper():
                 df = df.append(df_to_append, ignore_index=True)
             except:
                 pass
-        df.to_csv(path_or_buf='book_database.csv', sep='&', header=True)
+        df.to_csv(path_or_buf='book_database.csv', mode='a', sep='&', header=False)
 
 def preprocessing(data):
-    data = pd.read_csv(data)
+    data = pd.read_csv(data, sep='&')
+    data = data.dropna(subset=['avg_rating'])
+    data = data.reset_index(drop=True)
+    # MinMax Normilization on avg_rating and scaling from 0 to 10 and saving it into the minmax_norm_rating
+    data['minmax_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].min()) / (\
+                data['avg_rating'].max() - data['avg_rating'].min()) * 9
+    # Mean normilization
+    data['mean_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].mean()) / (\
+                data['avg_rating'].max() - data['avg_rating'].min()) * 9
+    data['awards'] = data['awards'].str.split(';').str.len()
+    return data
+
+def best_author_book(author, data):
+    return data[data['author']==author].sort_values("minmax_norm_rating", ascending=False)['title'].head(1).item()
 
 if __name__ == "__main__":
-    scraper()
+    #scraper()
+    data = preprocessing('./book_database.csv')
+    ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
+    print(best_author_book('George Orwell',data))
