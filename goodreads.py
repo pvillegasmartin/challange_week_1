@@ -139,6 +139,7 @@ def streamlit ():
     pass
 
 def graphs():
+    pass
 
 if __name__ == "__main__":
     #scraper()
