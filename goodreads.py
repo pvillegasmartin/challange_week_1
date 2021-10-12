@@ -2,6 +2,9 @@ from bs4 import BeautifulSoup
 import requests
 import pandas as pd
 from time import sleep
+import matplotlib.pyplot as plt
+import plotly.express as px
+import streamlit as st
 
 def bookscraper(url):
 
@@ -138,12 +141,64 @@ def best_author_book(author, data):
 def streamlit ():
     pass
 
-def graphs():
-    pass
+def graphs(data):
+
+    # GRAPH 1:
+    books_year = data.groupby(data['original_publish_year'])['title'].count()
+    fig_1 = plt.figure(figsize=(10, 6))
+    ax_1 = fig_1.add_subplot(1, 1, 1)
+    # set x axis
+    ax_1.set_xlabel("Year publication", fontsize=20)
+    # set y axis
+    ylabels = range(0, (int(books_year.max()/50)+1)*50, 50)
+    ax_1.set_ylabel("Number of books", fontsize=20)
+    ax_1.set_yticks(ylabels)
+    ax_1.set_yticklabels(ylabels, fontsize=20)
+    ax_1.set_title("Number of books per publication year", fontsize=30, pad=20)
+    ax_1.bar(books_year.index.values, books_year, width=0.8)
+    ax_1.grid(linestyle='--', linewidth=1)
+    plt.close()
+
+
+    #GRAPH 2:
+    #TODO think if we want to show only years with a minimum of books
+    ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
+    fig_2 = plt.figure(figsize=(10, 6))
+    ax_2 = fig_2.add_subplot(1, 1, 1)
+    # set x axis
+    ax_2.set_xlabel("Year publication", fontsize=20)
+    # set y axis
+    ylabels = range(1, 11, 1)
+    ax_2.set_ylabel("Avg rating", fontsize=20)
+    ax_2.set_yticks(ylabels)
+    ax_2.set_yticklabels(ylabels, fontsize=20)
+    ax_2.set_title("Avg rating per publication year", fontsize=30, pad=20)
+    ax_2.plot(ratings_minmax_year.index.values, ratings_minmax_year)
+    ax_2.grid(linestyle='--', linewidth=2)
+    plt.close()
+
+    # GRAPH 3:
+    books_author = data.groupby(data['author'])['title'].count().nlargest(25)
+    minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
+    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index)], axis=1)
+    fig_3 = px.treemap(data_graph_3,
+                 path=[data_graph_3.index.values],
+                 values=data_graph_3['title'],
+                 color=data_graph_3['minmax_norm_rating'],
+                 range_color=[data_graph_3['minmax_norm_rating'].min(),data_graph_3['minmax_norm_rating'].max()]
+                       )
+    fig_3.update_layout(title="Author by number of books and their rankings",
+                      width=1000, height=700)
+
+
+
+    return fig_3,fig_1,fig_2
 
 if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
-    print(ratings_minmax_year)
-    print(best_author_book('George Orwell',data))
+    graphs = graphs(data)
+    st.plotly_chart(graphs[0])
+    st.pyplot(graphs[1])
+    st.pyplot(graphs[2])
