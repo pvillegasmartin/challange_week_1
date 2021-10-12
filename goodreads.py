@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+import math
 from time import sleep
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -132,6 +133,7 @@ def preprocessing(data):
     # Mean normilization
     data['mean_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].mean()) / (\
                 data['avg_rating'].max() - data['avg_rating'].min()) * 9
+
     data['awards'] = data['awards'].str.split(';').str.len()
     return data
 
@@ -144,6 +146,7 @@ def streamlit ():
 def graphs(data):
 
     # GRAPH 1:
+
     books_year = data.groupby(data['original_publish_year'])['title'].count()
     fig_1 = plt.figure(figsize=(10, 6))
     ax_1 = fig_1.add_subplot(1, 1, 1)
@@ -158,7 +161,7 @@ def graphs(data):
     ax_1.bar(books_year.index.values, books_year, width=0.8)
     ax_1.grid(linestyle='--', linewidth=1)
 
-
+    table_1 = books_year.sort_values(ascending=False)
 
 
     #GRAPH 2:
@@ -168,18 +171,19 @@ def graphs(data):
     ax_2 = fig_2.add_subplot(1, 1, 1)
     # set x axis
     ax_2.set_xlabel("Year publication", fontsize=20)
+    ax_2.set_xlim(1950, 2022)
     # set y axis
     ylabels = range(1, 11, 1)
-    ax_2.set_ylabel("Avg rating", fontsize=20)
+    ax_2.set_ylabel("Minmax Norm Rating", fontsize=20)
     ax_2.set_yticks(ylabels)
     ax_2.set_yticklabels(ylabels, fontsize=20)
     ax_2.set_title("Avg rating per publication year", fontsize=30, pad=20)
     ax_2.plot(ratings_minmax_year.index.values, ratings_minmax_year)
-    ax_2.grid(linestyle='--', linewidth=2)
+    ax_2.grid(linestyle='--', linewidth=1)
 
     # GRAPH 3:
     #TODO number of authors as filter in streamlit
-    books_author = data.groupby(data['author'])['title'].count().nlargest(5)
+    books_author = data.groupby(data['author'])['title'].count().nlargest(50)
     minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
     best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
     best_book_author = pd.Series(best_book_author_data,name='best_book')
@@ -188,7 +192,7 @@ def graphs(data):
                 path=[data_graph_3.index.values],
                 values=data_graph_3['title'],
                 color=round(data_graph_3['minmax_norm_rating'],2),
-                range_color=[data_graph_3['minmax_norm_rating'].min(),data_graph_3['minmax_norm_rating'].max()],
+                range_color=[math.floor(data_graph_3['minmax_norm_rating'].min()),math.ceil(data_graph_3['minmax_norm_rating'].max())],
                 title="Author by number of books and their rankings",
                 width=1000,
                 height=max(len(books_author)*20,600),
@@ -199,7 +203,7 @@ def graphs(data):
 
 
 
-    return fig_3,fig_1,fig_2
+    return fig_3,fig_1,fig_2,table_1
 
 if __name__ == "__main__":
     #scraper()
@@ -207,6 +211,8 @@ if __name__ == "__main__":
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
     graphs = graphs(data)
 
-    #st.pyplot(graphs[1])
+    col1,col2 = st.columns((7,4))
+    col1.pyplot(graphs[1])
+    col2.write(graphs[-1])
     st.plotly_chart(graphs[0])
     st.write(graphs[0].data[0].labels)
