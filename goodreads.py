@@ -125,6 +125,12 @@ def preprocessing(data):
     data = data.drop_duplicates(subset=['title'])
     data = data.reset_index(drop=True)
 
+    #checking the Author column containing the numerice values count
+    authors_must_string = [not(str(author).isnumeric()) for author in data['author']]
+    data = data[authors_must_string]
+    #checking the Author column containing the numerice data and applying the simple indexing method
+    data.author.str.contains(r'[0-9]').value_counts()
+
 
 
     # MinMax Normilization on avg_rating and scaling from 0 to 10 and saving it into the minmax_norm_rating
