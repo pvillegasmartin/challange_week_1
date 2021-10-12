@@ -140,8 +140,14 @@ def preprocessing(data):
 def best_author_book(author, data):
     return data[data['author']==author].sort_values("minmax_norm_rating", ascending=False)['title'].head(1).item()
 
-def streamlit ():
-    pass
+def streamlit (graphs, data):
+    graphs = graphs(data)
+    st.title('type books...')
+    col1, col2 = st.columns((7, 4))
+    col1.pyplot(graphs[1])
+    col2.write(graphs[-1])
+    st.plotly_chart(graphs[0])
+    st.write(graphs[0].data[0].labels)
 
 def graphs(data):
 
@@ -183,7 +189,7 @@ def graphs(data):
 
     # GRAPH 3:
     #TODO number of authors as filter in streamlit
-    books_author = data.groupby(data['author'])['title'].count().nlargest(50)
+    books_author = data.groupby(data['author'])['title'].count().nlargest(5)
     minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
     best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
     best_book_author = pd.Series(best_book_author_data,name='best_book')
@@ -209,10 +215,5 @@ if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
-    graphs = graphs(data)
 
-    col1,col2 = st.columns((7,4))
-    col1.pyplot(graphs[1])
-    col2.write(graphs[-1])
-    st.plotly_chart(graphs[0])
-    st.write(graphs[0].data[0].labels)
+    streamlit(graphs,data)
