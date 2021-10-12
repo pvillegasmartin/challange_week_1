@@ -157,7 +157,8 @@ def graphs(data):
     ax_1.set_title("Number of books per publication year", fontsize=30, pad=20)
     ax_1.bar(books_year.index.values, books_year, width=0.8)
     ax_1.grid(linestyle='--', linewidth=1)
-    plt.close()
+
+
 
 
     #GRAPH 2:
@@ -175,20 +176,25 @@ def graphs(data):
     ax_2.set_title("Avg rating per publication year", fontsize=30, pad=20)
     ax_2.plot(ratings_minmax_year.index.values, ratings_minmax_year)
     ax_2.grid(linestyle='--', linewidth=2)
-    plt.close()
 
     # GRAPH 3:
-    books_author = data.groupby(data['author'])['title'].count().nlargest(25)
+    #TODO number of authors as filter in streamlit
+    books_author = data.groupby(data['author'])['title'].count().nlargest(50)
     minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
-    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index)], axis=1)
+    best_book_author = pd.Series({label:best_author_book(label, data) for label in books_author.index.values},name='best_book')
+    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1)
     fig_3 = px.treemap(data_graph_3,
-                 path=[data_graph_3.index.values],
-                 values=data_graph_3['title'],
-                 color=data_graph_3['minmax_norm_rating'],
-                 range_color=[data_graph_3['minmax_norm_rating'].min(),data_graph_3['minmax_norm_rating'].max()]
+                path=[data_graph_3.index.values],
+                values=data_graph_3['title'],
+                color=round(data_graph_3['minmax_norm_rating'],2),
+                range_color=[data_graph_3['minmax_norm_rating'].min(),data_graph_3['minmax_norm_rating'].max()],
+                title="Author by number of books and their rankings",
+                width=1000,
+                height=max(len(books_author)*20,600),
+                template='presentation'
                        )
-    fig_3.update_layout(title="Author by number of books and their rankings",
-                      width=1000, height=700)
+    fig_3.data[0].customdata = data_graph_3['best_book']
+    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Nº books:</b> %{value}<br><b>Avg rating:</b> %{color}<br><b>Best book:</b> %{customdata}<extra></extra>')
 
 
 
@@ -199,6 +205,8 @@ if __name__ == "__main__":
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
     graphs = graphs(data)
+
+    #st.pyplot(graphs[1])
     st.plotly_chart(graphs[0])
-    st.pyplot(graphs[1])
-    st.pyplot(graphs[2])
+    st.write(graphs[0].xaxis.get_label())
+    st.write(data['author'])
