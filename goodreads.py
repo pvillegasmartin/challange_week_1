@@ -114,13 +114,16 @@ def scraper():
 def preprocessing(data):
     data = pd.read_csv(data, sep='&')
     #TODO think which columns can't have None values and drop na
+    data= data.dropna(subset=['author'])
+    data= data.dropna(subset=['num_reviews'])
+    data=data.dropna(subset=['num_ratings'])
     data = data.dropna(subset=['avg_rating'])
     data = data.drop_duplicates(subset=['title'])
     data = data.reset_index(drop=True)
     # MinMax Normilization on avg_rating and scaling from 0 to 10 and saving it into the minmax_norm_rating
     data['minmax_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].min()) / (\
                 data['avg_rating'].max() - data['avg_rating'].min()) * 9
-    # Mean normilization
+    #Mean normilization on avg_rating column
     data['mean_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].mean()) / (\
                 data['avg_rating'].max() - data['avg_rating'].min()) * 9
     data['awards'] = data['awards'].str.split(';').str.len()
@@ -131,6 +134,6 @@ def best_author_book(author, data):
 
 if __name__ == "__main__":
     #scraper()
-    data = preprocessing('./book_database.csv')
+    data = preprocessing(r'C:\Users\Hari\Documents\AI-sep\AI_Module\Challange_Week1\challange_week_1\book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
     print(best_author_book('George Orwell',data))
