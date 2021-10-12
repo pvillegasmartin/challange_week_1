@@ -215,5 +215,4 @@ if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
-
     streamlit(graphs,data)
