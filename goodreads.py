@@ -158,7 +158,6 @@ def streamlit (graphs, data):
 def graphs(data):
 
     # GRAPH 1:
-
     books_year = data.groupby(data['original_publish_year'])['title'].count()
     fig_1 = plt.figure(figsize=(10, 6))
     ax_1 = fig_1.add_subplot(1, 1, 1)
@@ -213,12 +212,33 @@ def graphs(data):
     fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
     fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Nº books:</b> %{value}<br><b>Avg rating:</b> %{color}<br><b>Best book:</b> %{customdata}<extra></extra>')
 
+    # GRAPH 4
+    list_genres = {}
+    for element in data['genres']:
+        try:
+            for genre in element.split(';')[:3]:
+
+                if genre in list_genres.keys():
+                    list_genres[genre] += 1
+                else:
+                    list_genres[genre] = 1
+        except:
+            pass
+    top_genres = {key: list_genres[key] for key in sorted(list_genres, key=list_genres.get, reverse=True)[:5]}
+    fig_4 = plt.figure(figsize=(15, 10))
+    ax_4 = fig_4.add_subplot(1, 1, 1)
+    ax_4.set_title("Genres", fontsize=20)
+    ax_4.pie(top_genres.values(), normalize=True, labels=top_genres.keys(), autopct=lambda p: '{:.1f}%'.format(p), textprops={'fontsize': 18})
+    #ax_4.legend(loc='lower right', prop={'size': 20})
 
 
-    return fig_3,fig_1,fig_2,table_1
+
+
+    return fig_4,fig_1,fig_2,table_1
 
 if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
-    streamlit(graphs,data)
+    #streamlit(graphs,data)
+    st.pyplot(graphs(data)[0])
