@@ -113,10 +113,16 @@ def scraper():
 
 def preprocessing(data):
     data = pd.read_csv(data, sep='&')
-    #TODO think which columns can't have None values and drop na
-    data = data.dropna(subset=['avg_rating'])
+    #Filter data
+    data['original_publish_year'] = pd.to_numeric(data['original_publish_year'], errors='coerce')
+    # TODO think which columns can't have None values and drop na
+    data = data.dropna(subset=['avg_rating','original_publish_year'])
+    data = data[data['original_publish_year'] <= 2021]
     data = data.drop_duplicates(subset=['title'])
     data = data.reset_index(drop=True)
+
+
+
     # MinMax Normilization on avg_rating and scaling from 0 to 10 and saving it into the minmax_norm_rating
     data['minmax_norm_rating'] = 1 + (data['avg_rating'] - data['avg_rating'].min()) / (\
                 data['avg_rating'].max() - data['avg_rating'].min()) * 9
@@ -129,8 +135,14 @@ def preprocessing(data):
 def best_author_book(author, data):
     return data[data['author']==author].sort_values("minmax_norm_rating", ascending=False)['title'].head(1).item()
 
+def streamlit ():
+    pass
+
+def graphs():
+
 if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
+    print(ratings_minmax_year)
     print(best_author_book('George Orwell',data))
