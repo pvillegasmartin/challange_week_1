@@ -179,10 +179,11 @@ def graphs(data):
 
     # GRAPH 3:
     #TODO number of authors as filter in streamlit
-    books_author = data.groupby(data['author'])['title'].count().nlargest(50)
+    books_author = data.groupby(data['author'])['title'].count().nlargest(5)
     minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
-    best_book_author = pd.Series({label:best_author_book(label, data) for label in books_author.index.values},name='best_book')
-    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1)
+    best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
+    best_book_author = pd.Series(best_book_author_data,name='best_book')
+    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
     fig_3 = px.treemap(data_graph_3,
                 path=[data_graph_3.index.values],
                 values=data_graph_3['title'],
@@ -193,7 +194,7 @@ def graphs(data):
                 height=max(len(books_author)*20,600),
                 template='presentation'
                        )
-    fig_3.data[0].customdata = data_graph_3['best_book']
+    fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
     fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Nº books:</b> %{value}<br><b>Avg rating:</b> %{color}<br><b>Best book:</b> %{customdata}<extra></extra>')
 
 
@@ -208,5 +209,4 @@ if __name__ == "__main__":
 
     #st.pyplot(graphs[1])
     st.plotly_chart(graphs[0])
-    st.write(graphs[0].xaxis.get_label())
-    st.write(data['author'])
+    st.write(graphs[0].data[0].labels)
