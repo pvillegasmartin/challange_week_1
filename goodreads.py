@@ -7,6 +7,7 @@ from time import sleep
 import matplotlib.pyplot as plt
 import plotly.express as px
 import streamlit as st
+from streamlit_metrics import metric, metric_row
 from wordcloud import WordCloud, STOPWORDS
 from PIL import Image
 
@@ -144,19 +145,60 @@ def preprocessing(data):
                 data['avg_rating'].max() - data['avg_rating'].min()) * 9
 
     data['awards'] = data['awards'].str.split(';').str.len()
+    data = data.rename(columns={'title': 'Title', 'original_publish_year': 'Publication year', 'minmax_norm_rating': 'Rating', 'awards':'Awards', 'num_pages':'Nº pages', 'series':'Series'})
     return data
 
 def best_author_book(author, data):
-    return data[data['author']==author].sort_values("minmax_norm_rating", ascending=False)['title'].head(1).item()
+    return data[data['author']==author].sort_values("Rating", ascending=False)['Title'].head(1).item()
 
-def streamlit (graphs, data):
-    graphs = graphs(data)
-    st.title('type books...')
-    col1, col2 = st.columns((7, 4))
-    col1.pyplot(graphs[1])
-    col2.write(graphs[-1])
-    st.plotly_chart(graphs[0])
-    st.write(graphs[0].data[0].labels)
+def streamlit_template (graphs, data):
+    st.set_page_config(layout="wide")
+    analysis_type = st.sidebar.radio("SELECT TYPE OF ANALYSIS",('General', 'Author'))
+    st.markdown("<h1 style=' color: #948888;'>Best Dystopian and Post-Apocalyptic Fiction</h1>", unsafe_allow_html=True)
+    if analysis_type == 'General':
+        #FILTERS
+        year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
+        data = data[data['Publication year'] >= year_publication]
+        graphs_charts = graphs(data)
+        col1, col2 = st.beta_columns(2)
+        col1.pyplot(graphs_charts[6])
+        col2.pyplot(graphs_charts[5])
+        st.plotly_chart(graphs_charts[3])
+    elif analysis_type == 'Author':
+        authors = st.sidebar.selectbox("Authors", data['author'])
+        data = data[data['author'] == authors]
+        graphs_charts = graphs(data)
+        st.markdown(f"<h1 style=' color: #948888;'>{authors}</h1>", unsafe_allow_html=True)
+        metric_row(
+            {
+                "Nº Books": data['Title'].count(),
+                "Series books": data[data['Series'] == 1]['Title'].count(),
+                "Nº rewards": int(data['num_reviews'].sum()),
+                "Average rating books": round(data['Rating'].mean(),1),
+                "Nº awards": int(data['Awards'].sum())
+            }
+        )
+
+        st.markdown(f"<h2 style=' color: #948888;'>List of {authors}'s books</h2>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p style=' color: #948888;'>In this table you can find all {authors}'s books with some relevant information sorted by rating value.</p>",
+            unsafe_allow_html=True)
+
+        col1, col2, col3 = st.beta_columns((1, 4, 1))
+        col2.table(data.loc[:, ['Title', 'Series', 'Publication year', 'Rating', 'Awards', 'Nº pages']].set_index(
+            'Title').sort_values('Rating', ascending=False))
+
+
+        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style=' color: #948888;'>Fast view of the most important type of genres present in {authors}'s books.</p>", unsafe_allow_html=True)
+        fig = plt.figure(figsize=(5, 2))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.imshow(graphs_charts[0], interpolation='bilinear')
+        ax.axis("off")
+        col1, col2, col3 = st.beta_columns((1,2,1))
+        col2.pyplot(fig)
+
+
 
 def transform_format(val):
     if val == 0:
@@ -167,7 +209,7 @@ def transform_format(val):
 def graphs(data,transform_format=transform_format):
 
     # GRAPH 1:
-    books_year = data.groupby(data['original_publish_year'])['title'].count()
+    books_year = data.groupby(data['Publication year'])['Title'].count()
     fig_1 = plt.figure(figsize=(10, 6))
     ax_1 = fig_1.add_subplot(1, 1, 1)
     # set x axis
@@ -186,12 +228,11 @@ def graphs(data,transform_format=transform_format):
 
     #GRAPH 2:
     #TODO think if we want to show only years with a minimum of books
-    ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
+    ratings_minmax_year = data.groupby(data['Publication year'])['Rating'].mean()
     fig_2 = plt.figure(figsize=(10, 6))
     ax_2 = fig_2.add_subplot(1, 1, 1)
     # set x axis
     ax_2.set_xlabel("Year publication", fontsize=20)
-    ax_2.set_xlim(1950, 2022)
     # set y axis
     ylabels = range(1, 11, 1)
     ax_2.set_ylabel("Minmax Norm Rating", fontsize=20)
@@ -203,16 +244,16 @@ def graphs(data,transform_format=transform_format):
 
     # GRAPH 3:
     #TODO number of authors as filter in streamlit
-    books_author = data.groupby(data['author'])['title'].count().nlargest(5)
-    minmax_rating_author = data.groupby(data['author'])['minmax_norm_rating'].mean()
+    books_author = data.groupby(data['author'])['Title'].count().nlargest(5)
+    minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
     best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
     best_book_author = pd.Series(best_book_author_data,name='best_book')
     data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
     fig_3 = px.treemap(data_graph_3,
                 path=[data_graph_3.index.values],
-                values=data_graph_3['title'],
-                color=round(data_graph_3['minmax_norm_rating'],2),
-                range_color=[math.floor(data_graph_3['minmax_norm_rating'].min()),math.ceil(data_graph_3['minmax_norm_rating'].max())],
+                values=data_graph_3['Title'],
+                color=round(data_graph_3['Rating'],2),
+                range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
                 title="Author by number of books and their rankings",
                 width=1000,
                 height=max(len(books_author)*20,600),
@@ -256,7 +297,7 @@ def graphs(data,transform_format=transform_format):
     # set y axis
     ax_5.set_ylabel("Number of reviews", fontsize=20)
     ax_5.set_title("Number of reviews by rating", fontsize=30, pad=20)
-    ax_5.scatter(data['minmax_norm_rating'], data['num_reviews'])
+    ax_5.scatter(data['Rating'], data['num_reviews'])
     ax_5.grid(linestyle='--', linewidth=1)
 
     # GRAPH 6: explain we need a minimum of reviews
@@ -270,25 +311,10 @@ def graphs(data,transform_format=transform_format):
     ax_6.text(1.02, int(data['num_reviews'].mean()), 'mean: ' + str(int(data['num_reviews'].mean())), color='green')
     ax_6.text(0.95, int(data['num_reviews'].median())+15, 'median: ' + str(int(data['num_reviews'].median())), color='orange')
 
-    return word_cloud,fig_4,fig_1,fig_2,fig_3,fig_5,fig_6
-
-
+    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6
 
 
 if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
-    ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
-    #streamlit(graphs,data)
-
-    #TODO add this to streamlit function
-    fig = plt.figure(figsize=(20, 10))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.imshow(graphs(data)[0], interpolation='bilinear')
-    ax.axis("off")
-    #fig.savefig("book_genre.png", format="png")
-    st.pyplot(fig)
-
-    st.pyplot(graphs(data)[-1])
-    st.pyplot(graphs(data)[-2])
-    #st.plotly_chart(graphs(data)[-1])
+    streamlit_template(graphs,data)
