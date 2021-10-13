@@ -247,8 +247,30 @@ def graphs(data,transform_format=transform_format):
 
     word_cloud = WordCloud(width=1600, height=800, background_color="white").generate_from_frequencies(list_genres)
 
+    #GRAPH 5: explain we need a minimum of reviews
+    fig_5 = plt.figure(figsize=(10, 6))
+    ax_5 = fig_5.add_subplot(1, 1, 1)
+    # set x axis
+    ax_5.set_xlabel("Minmax Norm Rating", fontsize=20)
+    ax_5.set_xlim(1, 10)
+    # set y axis
+    ax_5.set_ylabel("Number of reviews", fontsize=20)
+    ax_5.set_title("Number of reviews by rating", fontsize=30, pad=20)
+    ax_5.scatter(data['minmax_norm_rating'], data['num_reviews'])
+    ax_5.grid(linestyle='--', linewidth=1)
 
-    return fig_4,fig_1,fig_2,fig_3,word_cloud
+    # GRAPH 6: explain we need a minimum of reviews
+    Q1 = data['num_reviews'].quantile(0.25)
+    print(Q1)
+    fig_6 = plt.figure(figsize=(10, 6))
+    ax_6 = fig_6.add_subplot(1, 1, 1)
+    ax_6.set_title("Number of reviews", fontsize=30, pad=20)
+    ax_6.set_xlabel("All books", fontsize=20)
+    ax_6.boxplot(data['num_reviews'], showfliers=False, showmeans=True)
+    ax_6.text(1.02, int(data['num_reviews'].mean()), 'mean: ' + str(int(data['num_reviews'].mean())), color='green')
+    ax_6.text(0.95, int(data['num_reviews'].median())+15, 'median: ' + str(int(data['num_reviews'].median())), color='orange')
+
+    return word_cloud,fig_4,fig_1,fig_2,fig_3,fig_5,fig_6
 
 
 
@@ -262,10 +284,11 @@ if __name__ == "__main__":
     #TODO add this to streamlit function
     fig = plt.figure(figsize=(20, 10))
     ax = fig.add_subplot(1, 1, 1)
-    ax.imshow(graphs(data)[-1], interpolation='bilinear')
+    ax.imshow(graphs(data)[0], interpolation='bilinear')
     ax.axis("off")
-    fig.savefig("book_genre.png", format="png")
+    #fig.savefig("book_genre.png", format="png")
     st.pyplot(fig)
 
-
+    st.pyplot(graphs(data)[-1])
+    st.pyplot(graphs(data)[-2])
     #st.plotly_chart(graphs(data)[-1])
