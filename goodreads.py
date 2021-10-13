@@ -1,11 +1,14 @@
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+import numpy as np
 import math
 from time import sleep
 import matplotlib.pyplot as plt
 import plotly.express as px
 import streamlit as st
+from wordcloud import WordCloud, STOPWORDS
+from PIL import Image
 
 def bookscraper(url):
 
@@ -155,7 +158,13 @@ def streamlit (graphs, data):
     st.plotly_chart(graphs[0])
     st.write(graphs[0].data[0].labels)
 
-def graphs(data):
+def transform_format(val):
+    if val == 0:
+        return 255
+    else:
+        return val
+
+def graphs(data,transform_format=transform_format):
 
     # GRAPH 1:
     books_year = data.groupby(data['original_publish_year'])['title'].count()
@@ -216,7 +225,7 @@ def graphs(data):
     list_genres = {}
     for element in data['genres']:
         try:
-            for genre in element.split(';')[:3]:
+            for genre in element.split(';'):#[:3]:
 
                 if genre in list_genres.keys():
                     list_genres[genre] += 1
@@ -231,14 +240,32 @@ def graphs(data):
     ax_4.pie(top_genres.values(), normalize=True, labels=top_genres.keys(), autopct=lambda p: '{:.1f}%'.format(p), textprops={'fontsize': 18})
     #ax_4.legend(loc='lower right', prop={'size': 20})
 
+    #mask = np.array(Image.open("libro.png"))
+    #transformed_mask = np.ndarray((mask.shape[0], mask.shape[1]), np.int32)
+    #for i in range(len(mask)):
+    #    transformed_mask[i] = list(map(transform_format, mask[i]))
+
+    word_cloud = WordCloud(width=1600, height=800, background_color="white").generate_from_frequencies(list_genres)
+
+
+    return fig_4,fig_1,fig_2,fig_3,word_cloud
 
 
 
-    return fig_4,fig_1,fig_2,table_1
 
 if __name__ == "__main__":
     #scraper()
     data = preprocessing('./book_database.csv')
     ratings_minmax_year = data.groupby(data['original_publish_year'])['minmax_norm_rating'].mean()
     #streamlit(graphs,data)
-    st.pyplot(graphs(data)[0])
+
+    #TODO add this to streamlit function
+    fig = plt.figure(figsize=(20, 10))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.imshow(graphs(data)[-1], interpolation='bilinear')
+    ax.axis("off")
+    fig.savefig("book_genre.png", format="png")
+    st.pyplot(fig)
+
+
+    #st.plotly_chart(graphs(data)[-1])
