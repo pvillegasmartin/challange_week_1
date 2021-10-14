@@ -23,7 +23,6 @@ def bookscraper(url):
     avg_rating = None
     num_pages = None
     original_publish_year = None
-    series = None
     genres = None
     awards = None
     places = None
@@ -101,18 +100,16 @@ def bookscraper(url):
 def scraper():
     base_url = 'https://www.goodreads.com'
 
-    for i in range(20,38):
+    for i in range(1,38):
         df = pd.DataFrame(columns=["url", "title", "author", "num_reviews", "num_ratings", "avg_rating", "num_pages",
                                    "original_publish_year", "series", "genres", "awards", "places"])
         page = requests.get(f'https://www.goodreads.com/list/show/47.Best_Dystopian_and_Post_Apocalyptic_Fiction?page={i}')
         soup = BeautifulSoup(page.content, 'html.parser')
-        print(i)
         book_titles = soup.find_all('a', class_="bookTitle")
         for book in book_titles:
             try:
                 id_book = book.get('href')
                 data_to_append = bookscraper(base_url+id_book)
-                print(data_to_append['title'])
                 df_to_append = pd.DataFrame(data_to_append, index=[0])
                 df = df.append(df_to_append, ignore_index=True)
             except:
@@ -157,8 +154,8 @@ def streamlit_template (graphs, data):
     st.markdown("<h1 style=' color: #948888;'>Best Dystopian and Post-Apocalyptic Fiction</h1>", unsafe_allow_html=True)
     if analysis_type == 'General':
         #FILTERS
-        year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
-        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1)
+        year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1, value=1950)
+        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1, value=10)
         data = data[data['Publication year'] >= year_publication]
         graphs_charts = graphs(data,top_authors=number_authors)
         col1, col2, col3 = st.beta_columns(3)
@@ -193,7 +190,7 @@ def streamlit_template (graphs, data):
             unsafe_allow_html=True)
 
         col1, col2, col3 = st.beta_columns((1, 4, 1))
-        col2.table(data.loc[:, ['Title', 'Series', 'Publication year', 'Rating', 'Awards', 'Nº pages']].set_index(
+        col2.table(data.loc[:, ['Title', 'Series', 'Publication year','num_reviews', 'Rating', 'Awards', 'Nº pages']].set_index(
             'Title').sort_values('Rating', ascending=False))
 
 
@@ -247,29 +244,6 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_2.set_title("Avg rating per publication year", fontsize=30, pad=20)
     ax_2.plot(ratings_minmax_year.index.values, ratings_minmax_year)
     ax_2.grid(linestyle='--', linewidth=1)
-
-    # GRAPH 3:
-    books_author = data.groupby(data['author'])['Title'].count().nlargest(top_authors)
-    minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
-    best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
-    best_book_author = pd.Series(best_book_author_data,name='best_book')
-    #data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
-    boolean_top_authors = data.author.isin(books_author.index.values)
-    data_graph_3 = data[boolean_top_authors]
-    data_graph_3['all'] = f'Top {top_authors} authors'
-    fig_3 = px.treemap(data_graph_3,
-                       path=[data_graph_3['all'], data_graph_3['author'],data_graph_3['Title']],
-                       values=data_graph_3['Rating'],
-                       color=data_graph_3['Rating'],
-                       range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
-                       title="Author by rankings and their number of books",
-                       width=1200,
-                       height=max(len(books_author) * 70, 600),
-                       template='presentation'
-                       )
-    fig_3.data[0].textinfo = 'label+value'
-    #fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
-    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value}<br><extra></extra>')
 
     # GRAPH 4
     list_genres = {}
@@ -374,6 +348,29 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_9.set_title("Rating by number of books", fontsize=30, pad=20)
     ax_9.scatter(books_author_sum['Title'], books_author_sum['Rating'])
     ax_9.grid(linestyle='--', linewidth=1)
+
+    # GRAPH 3:
+    #books_author = data.groupby(data['author'])['Title'].count().nlargest(top_authors)
+    #minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
+    #best_book_author_data = {label: best_author_book(label, data) for label in books_author.index.values}
+    #best_book_author = pd.Series(best_book_author_data, name='best_book')
+    # data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
+    boolean_top_authors = data.author.isin(reviews_author_mean.nlargest(top_authors).index.values)
+    data_graph_3 = data[boolean_top_authors]
+    data_graph_3['all'] = f'Top {top_authors} authors'
+    fig_3 = px.treemap(data_graph_3,
+                       path=[data_graph_3['all'], data_graph_3['author'], data_graph_3['Title']],
+                       values=data_graph_3['Rating'],
+                       color=data_graph_3['Rating'],
+                       range_color=[math.floor(data_graph_3['Rating'].min()), math.ceil(data_graph_3['Rating'].max())],
+                       title="Author by rankings and their number of books",
+                       width=1200,
+                       height=max(top_authors * 70, 600),
+                       template='presentation'
+                       )
+    fig_3.data[0].textinfo = 'label+value'
+    # fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
+    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value}<br><extra></extra>')
 
     return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8,fig_9
 
