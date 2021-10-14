@@ -158,12 +158,18 @@ def streamlit_template (graphs, data):
     if analysis_type == 'General':
         #FILTERS
         year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
+        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1)
         data = data[data['Publication year'] >= year_publication]
-        graphs_charts = graphs(data)
+        graphs_charts = graphs(data,top_authors=number_authors)
         col1, col2 = st.beta_columns(2)
         col1.pyplot(graphs_charts[6])
         col2.pyplot(graphs_charts[5])
-        st.plotly_chart(graphs_charts[3])
+        col1, col2 = st.beta_columns(2)
+        col1.pyplot(graphs_charts[7])
+        col2.pyplot(graphs_charts[8])
+        col1, col2, col3 = st.beta_columns((1, 4, 1))
+        col2.plotly_chart(graphs_charts[3])
+
     elif analysis_type == 'Author':
         authors = st.sidebar.selectbox("Authors", data['author'])
         data = data[data['author'] == authors]
@@ -198,15 +204,13 @@ def streamlit_template (graphs, data):
         col1, col2, col3 = st.beta_columns((1,2,1))
         col2.pyplot(fig)
 
-
-
 def transform_format(val):
     if val == 0:
         return 255
     else:
         return val
 
-def graphs(data,transform_format=transform_format):
+def graphs(data,transform_format=transform_format,top_authors=5):
 
     # GRAPH 1:
     books_year = data.groupby(data['Publication year'])['Title'].count()
@@ -244,7 +248,7 @@ def graphs(data,transform_format=transform_format):
 
     # GRAPH 3:
     #TODO number of authors as filter in streamlit
-    books_author = data.groupby(data['author'])['Title'].count().nlargest(5)
+    books_author = data.groupby(data['author'])['Title'].count().nlargest(top_authors)
     minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
     best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
     best_book_author = pd.Series(best_book_author_data,name='best_book')
@@ -302,7 +306,6 @@ def graphs(data,transform_format=transform_format):
 
     # GRAPH 6: explain we need a minimum of reviews
     Q1 = data['num_reviews'].quantile(0.25)
-    print(Q1)
     fig_6 = plt.figure(figsize=(10, 6))
     ax_6 = fig_6.add_subplot(1, 1, 1)
     ax_6.set_title("Number of reviews", fontsize=30, pad=20)
@@ -311,7 +314,45 @@ def graphs(data,transform_format=transform_format):
     ax_6.text(1.02, int(data['num_reviews'].mean()), 'mean: ' + str(int(data['num_reviews'].mean())), color='green')
     ax_6.text(0.95, int(data['num_reviews'].median())+15, 'median: ' + str(int(data['num_reviews'].median())), color='orange')
 
-    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6
+    # GRAPH 7: explain relation of reviews and authors
+    reviews_author_mean = data.groupby(data['author'])['num_reviews'].mean().nlargest(top_authors)
+    reviews_author_sum = data.groupby(data['author'])['num_reviews'].sum().nlargest(top_authors)
+    colors = {'both':'green', 'one':'red'}
+
+    fig_7 = plt.figure(figsize=(10, 6))
+    ax_7 = fig_7.add_subplot(1, 1, 1)
+    # set x axis
+    ax_7.set_xlabel("Authors", fontsize=20)
+    ax_7.set_xticklabels(reviews_author_mean.index.values, rotation=30, ha='right')
+    # set y axis
+    ax_7.set_ylabel("Number of reviews", fontsize=20)
+    ax_7.set_title(f"Top {top_authors} authors by average reviews", fontsize=30, pad=20)
+    c = []
+    for el in reviews_author_mean.index.values:
+        if el in reviews_author_sum.index.values:
+            c.append(colors['both'])
+        else:
+            c.append(colors['one'])
+    ax_7.bar(reviews_author_mean.index.values, reviews_author_mean.values, color=c)
+    ax_7.grid(linestyle='--', axis='y', linewidth=1)
+    fig_8 = plt.figure(figsize=(10, 6))
+    ax_8 = fig_8.add_subplot(1, 1, 1)
+    # set x axis
+    ax_8.set_xlabel("Authors", fontsize=20)
+    ax_8.set_xticklabels(reviews_author_sum.index.values, rotation=30, ha='right')
+    # set y axis
+    ax_8.set_ylabel("Number of reviews", fontsize=20)
+    ax_8.set_title(f"Top {top_authors} authors by total reviews", fontsize=30, pad=20)
+    c = []
+    for el in reviews_author_sum.index.values:
+        if el in reviews_author_mean.index.values:
+            c.append(colors['both'])
+        else:
+            c.append(colors['one'])
+    ax_8.bar(reviews_author_sum.index.values, reviews_author_sum.values, color=c)
+    ax_8.grid(linestyle='--', axis='y', linewidth=1)
+
+    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8
 
 
 if __name__ == "__main__":
