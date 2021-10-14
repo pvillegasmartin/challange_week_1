@@ -120,6 +120,7 @@ def preprocessing(data):
     data = pd.read_csv(data, sep='&')
     #Filter data
     data['original_publish_year'] = pd.to_numeric(data['original_publish_year'], errors='coerce')
+    data = data[data['original_publish_year']>1900]
     # TODO think which columns can't have None values and drop na
     data = data.dropna(subset=['avg_rating','original_publish_year'])
     data = data[data['original_publish_year'] <= 2021]
@@ -150,22 +151,48 @@ def best_author_book(author, data):
 
 def streamlit_template (graphs, data):
     st.set_page_config(layout="wide")
-    analysis_type = st.sidebar.radio("SELECT TYPE OF ANALYSIS",('General', 'Author'))
-    st.markdown("<h1 style=' color: #948888;'>Best Dystopian and Post-Apocalyptic Fiction</h1>", unsafe_allow_html=True)
+    st.sidebar.markdown("<h1 style=' color: #948888;'>BEST DYSTOPIAN & POST-APOCALYPTIC FICTION BOOKS</h1>",
+                        unsafe_allow_html=True)
+    st.sidebar.write('\n')
+    awarded_version = st.sidebar.checkbox("Only awarded books", help=f"We recommend have it unselected to give an oportunity to less known books")
+    if awarded_version:
+        data = data[data['Awards']>0]
+    st.sidebar.write('\n')
+    analysis_type = st.sidebar.radio("SELECT TYPE OF ANALYSIS", ('General', 'Author'))
     if analysis_type == 'General':
         #FILTERS
-        year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1, value=1950)
+        year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
         number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1, value=10)
         data = data[data['Publication year'] >= year_publication]
         graphs_charts = graphs(data,top_authors=number_authors)
+        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            unsafe_allow_html=True)
         col1, col2, col3 = st.beta_columns(3)
         col2.pyplot(graphs_charts[6])
+
+        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            unsafe_allow_html=True)
+
         col1, col2 = st.beta_columns(2)
         col1.pyplot(graphs_charts[5])
         col2.pyplot(graphs_charts[9])
+
+        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            unsafe_allow_html=True)
         col1, col2 = st.beta_columns(2)
         col1.pyplot(graphs_charts[8])
         col2.pyplot(graphs_charts[7])
+
+        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            unsafe_allow_html=True)
         col1, col2, col3 = st.beta_columns((1, 6, 1))
         col2.plotly_chart(graphs_charts[3])
 
@@ -184,16 +211,6 @@ def streamlit_template (graphs, data):
             }
         )
 
-        st.markdown(f"<h2 style=' color: #948888;'>List of {authors}'s books</h2>", unsafe_allow_html=True)
-        st.markdown(
-            f"<p style=' color: #948888;'>In this table you can find all {authors}'s books with some relevant information sorted by rating value.</p>",
-            unsafe_allow_html=True)
-
-        col1, col2, col3 = st.beta_columns((1, 4, 1))
-        col2.table(data.loc[:, ['Title', 'Series', 'Publication year','num_reviews', 'Rating', 'Awards', 'Nº pages']].set_index(
-            'Title').sort_values('Rating', ascending=False))
-
-
         st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
         st.markdown(f"<p style=' color: #948888;'>Fast view of the most important type of genres present in {authors}'s books.</p>", unsafe_allow_html=True)
         fig = plt.figure(figsize=(5, 2))
@@ -202,6 +219,17 @@ def streamlit_template (graphs, data):
         ax.axis("off")
         col1, col2, col3 = st.beta_columns((1,2,1))
         col2.pyplot(fig)
+        books = st.checkbox("See books details", help=f"Click me if you want to see {authors}'s books details")
+        if books:
+            st.markdown(f"<h2 style=' color: #948888;'>List of {authors}'s books</h2>", unsafe_allow_html=True)
+            st.markdown(
+                f"<p style=' color: #948888;'>In this table you can find all {authors}'s books with some relevant information sorted by rating value.</p>",
+                unsafe_allow_html=True)
+
+            col1, col2, col3 = st.beta_columns((1, 4, 1))
+            col2.table(data.loc[:, ['Title', 'Series', 'Publication year', 'num_reviews', 'Rating', 'Awards',
+                                    'Nº pages']].set_index(
+                'Title').sort_values('Rating', ascending=False))
 
 def transform_format(val):
     if val == 0:
@@ -363,7 +391,7 @@ def graphs(data,transform_format=transform_format,top_authors=5):
                        values=data_graph_3['Rating'],
                        color=data_graph_3['Rating'],
                        range_color=[math.floor(data_graph_3['Rating'].min()), math.ceil(data_graph_3['Rating'].max())],
-                       title="Author by rankings and their number of books",
+                       title=f"Top {top_authors} authors by average reviews classified by number of books and book's rating",
                        width=1200,
                        height=max(top_authors * 70, 600),
                        template='presentation'
