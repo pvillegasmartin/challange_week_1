@@ -161,9 +161,11 @@ def streamlit_template (graphs, data):
         number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1)
         data = data[data['Publication year'] >= year_publication]
         graphs_charts = graphs(data,top_authors=number_authors)
+        col1, col2, col3 = st.beta_columns(3)
+        col2.pyplot(graphs_charts[6])
         col1, col2 = st.beta_columns(2)
-        col1.pyplot(graphs_charts[6])
-        col2.pyplot(graphs_charts[5])
+        col1.pyplot(graphs_charts[5])
+        col2.pyplot(graphs_charts[9])
         col1, col2 = st.beta_columns(2)
         col1.pyplot(graphs_charts[8])
         col2.pyplot(graphs_charts[7])
@@ -255,18 +257,6 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     boolean_top_authors = data.author.isin(books_author.index.values)
     data_graph_3 = data[boolean_top_authors]
     data_graph_3['all'] = f'Top {top_authors} authors'
-    """
-    fig_3 = px.treemap(data_graph_3,
-                path=[data_graph_3.index.values],
-                values=data_graph_3['Rating'],
-                color=data_graph_3['Title'],
-                #range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
-                title="Author by rankings and their number of books",
-                width=1000,
-                height=max(len(books_author)*20,600),
-                template='presentation'
-                       )
-    """
     fig_3 = px.treemap(data_graph_3,
                        path=[data_graph_3['all'], data_graph_3['author'],data_graph_3['Title']],
                        values=data_graph_3['Rating'],
@@ -311,17 +301,17 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     fig_5 = plt.figure(figsize=(10, 6))
     ax_5 = fig_5.add_subplot(1, 1, 1)
     # set x axis
-    ax_5.set_xlabel("Minmax Norm Rating", fontsize=20)
-    ax_5.set_xlim(1, 10)
+    ax_5.set_xlabel("Number of reviews", fontsize=20)
     # set y axis
-    ax_5.set_ylabel("Number of reviews", fontsize=20)
-    ax_5.set_title("Number of reviews by rating", fontsize=30, pad=20)
-    ax_5.scatter(data['Rating'], data['num_reviews'])
+    ax_5.set_ylabel("Rating", fontsize=20)
+    ax_5.set_ylim(1, 10)
+    ax_5.set_title("Rating by number of reviews", fontsize=30, pad=20)
+    ax_5.scatter(data['num_reviews'], data['Rating'])
     ax_5.grid(linestyle='--', linewidth=1)
 
     # GRAPH 6: explain we need a minimum of reviews
     Q1 = data['num_reviews'].quantile(0.25)
-    fig_6 = plt.figure(figsize=(10, 6))
+    fig_6 = plt.figure()
     ax_6 = fig_6.add_subplot(1, 1, 1)
     ax_6.set_title("Number of reviews", fontsize=30, pad=20)
     ax_6.set_xlabel("All books", fontsize=20)
@@ -371,7 +361,21 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_8.text(-0.4, int(reviews_author_sum.mean())+8000, 'mean: ' + str(int(reviews_author_sum.mean())), color='green', backgroundcolor='white')
     ax_8.grid(linestyle='--', axis='y', linewidth=1)
 
-    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8
+    # GRAPH 9: explain we need a minimum of reviews
+    books_author_sum = pd.concat([data.groupby(data['author'])['Title'].count(),data.groupby(data['author'])['Rating'].mean()],axis=1)
+    fig_9 = plt.figure(figsize=(10, 6))
+    ax_9 = fig_9.add_subplot(1, 1, 1)
+    # set x axis
+    ax_9.set_xlabel("Number of books", fontsize=20)
+    ax_9.set_xlim(int(min(books_author_sum['Title']))-1, int(max(books_author_sum['Title']))+1)
+    ax_9.set_xticks(range(int(min(books_author_sum['Title']))-1, int(max(books_author_sum['Title']))+1,1))
+    # set y axis
+    ax_9.set_ylabel("Rating", fontsize=20)
+    ax_9.set_title("Rating by number of books", fontsize=30, pad=20)
+    ax_9.scatter(books_author_sum['Title'], books_author_sum['Rating'])
+    ax_9.grid(linestyle='--', linewidth=1)
+
+    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8,fig_9
 
 
 if __name__ == "__main__":
