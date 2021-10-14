@@ -13,6 +13,11 @@ from PIL import Image
 
 def bookscraper(url):
 
+    '''
+    Gets all information of a specific book
+    :param url: url of one book
+    :return: dictionary with all information of a book
+    '''
     page_book = requests.get(url)
     soup_book = BeautifulSoup(page_book.content, 'html.parser')
 
@@ -98,6 +103,10 @@ def bookscraper(url):
     return to_append
 
 def scraper():
+    '''
+    Loop all best Dystopian_and_Post_Apocalyptic_Fiction books in goodreads webpage
+    :return: save a csv document with all information books
+    '''
     base_url = 'https://www.goodreads.com'
 
     for i in range(1,38):
