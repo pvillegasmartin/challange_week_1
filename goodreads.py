@@ -165,9 +165,9 @@ def streamlit_template (graphs, data):
         col1.pyplot(graphs_charts[6])
         col2.pyplot(graphs_charts[5])
         col1, col2 = st.beta_columns(2)
-        col1.pyplot(graphs_charts[7])
-        col2.pyplot(graphs_charts[8])
-        col1, col2, col3 = st.beta_columns((1, 4, 1))
+        col1.pyplot(graphs_charts[8])
+        col2.pyplot(graphs_charts[7])
+        col1, col2, col3 = st.beta_columns((1, 6, 1))
         col2.plotly_chart(graphs_charts[3])
 
     elif analysis_type == 'Author':
@@ -247,24 +247,39 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_2.grid(linestyle='--', linewidth=1)
 
     # GRAPH 3:
-    #TODO number of authors as filter in streamlit
     books_author = data.groupby(data['author'])['Title'].count().nlargest(top_authors)
     minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
     best_book_author_data = {label:best_author_book(label, data) for label in books_author.index.values}
     best_book_author = pd.Series(best_book_author_data,name='best_book')
-    data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
+    #data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
+    boolean_top_authors = data.author.isin(books_author.index.values)
+    data_graph_3 = data[boolean_top_authors]
+    data_graph_3['all'] = f'Top {top_authors} authors'
+    """
     fig_3 = px.treemap(data_graph_3,
                 path=[data_graph_3.index.values],
-                values=data_graph_3['Title'],
-                color=round(data_graph_3['Rating'],2),
-                range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
-                title="Author by number of books and their rankings",
+                values=data_graph_3['Rating'],
+                color=data_graph_3['Title'],
+                #range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
+                title="Author by rankings and their number of books",
                 width=1000,
                 height=max(len(books_author)*20,600),
                 template='presentation'
                        )
-    fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
-    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Nº books:</b> %{value}<br><b>Avg rating:</b> %{color}<br><b>Best book:</b> %{customdata}<extra></extra>')
+    """
+    fig_3 = px.treemap(data_graph_3,
+                       path=[data_graph_3['all'], data_graph_3['author'],data_graph_3['Title']],
+                       values=data_graph_3['Rating'],
+                       color=data_graph_3['Rating'],
+                       range_color=[math.floor(data_graph_3['Rating'].min()),math.ceil(data_graph_3['Rating'].max())],
+                       title="Author by rankings and their number of books",
+                       width=1200,
+                       height=max(len(books_author) * 70, 600),
+                       template='presentation'
+                       )
+    fig_3.data[0].textinfo = 'label+value'
+    #fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
+    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value}<br><extra></extra>')
 
     # GRAPH 4
     list_genres = {}
@@ -315,41 +330,45 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_6.text(0.95, int(data['num_reviews'].median())+15, 'median: ' + str(int(data['num_reviews'].median())), color='orange')
 
     # GRAPH 7: explain relation of reviews and authors
-    reviews_author_mean = data.groupby(data['author'])['num_reviews'].mean().nlargest(top_authors)
-    reviews_author_sum = data.groupby(data['author'])['num_reviews'].sum().nlargest(top_authors)
+    reviews_author_mean = data.groupby(data['author'])['num_reviews'].mean()
+    reviews_author_sum = data.groupby(data['author'])['num_reviews'].sum()
     colors = {'both':'green', 'one':'red'}
 
     fig_7 = plt.figure(figsize=(10, 6))
     ax_7 = fig_7.add_subplot(1, 1, 1)
     # set x axis
     ax_7.set_xlabel("Authors", fontsize=20)
-    ax_7.set_xticklabels(reviews_author_mean.index.values, rotation=30, ha='right')
+    ax_7.set_xticklabels(reviews_author_mean.nlargest(top_authors).index.values, rotation=30, ha='right')
     # set y axis
-    ax_7.set_ylabel("Number of reviews", fontsize=20)
+    ax_7.set_ylabel("Average reviews", fontsize=20)
     ax_7.set_title(f"Top {top_authors} authors by average reviews", fontsize=30, pad=20)
     c = []
-    for el in reviews_author_mean.index.values:
-        if el in reviews_author_sum.index.values:
+    for el in reviews_author_mean.nlargest(top_authors).index.values:
+        if el in reviews_author_sum.nlargest(top_authors).index.values:
             c.append(colors['both'])
         else:
             c.append(colors['one'])
-    ax_7.bar(reviews_author_mean.index.values, reviews_author_mean.values, color=c)
+    ax_7.bar(reviews_author_mean.nlargest(top_authors).index.values, reviews_author_mean.nlargest(top_authors).values, color=c)
+    ax_7.axhline(reviews_author_mean.mean(), color='green', linewidth=1)
+    ax_7.text(-0.40, int(reviews_author_mean.mean())+5000, 'mean: ' + str(int(reviews_author_mean.mean())), color='green', backgroundcolor='white')
     ax_7.grid(linestyle='--', axis='y', linewidth=1)
     fig_8 = plt.figure(figsize=(10, 6))
     ax_8 = fig_8.add_subplot(1, 1, 1)
     # set x axis
     ax_8.set_xlabel("Authors", fontsize=20)
-    ax_8.set_xticklabels(reviews_author_sum.index.values, rotation=30, ha='right')
+    ax_8.set_xticklabels(reviews_author_sum.nlargest(top_authors).index.values, rotation=30, ha='right')
     # set y axis
-    ax_8.set_ylabel("Number of reviews", fontsize=20)
+    ax_8.set_ylabel("Total reviews", fontsize=20)
     ax_8.set_title(f"Top {top_authors} authors by total reviews", fontsize=30, pad=20)
     c = []
-    for el in reviews_author_sum.index.values:
-        if el in reviews_author_mean.index.values:
+    for el in reviews_author_sum.nlargest(top_authors).index.values:
+        if el in reviews_author_mean.nlargest(top_authors).index.values:
             c.append(colors['both'])
         else:
             c.append(colors['one'])
-    ax_8.bar(reviews_author_sum.index.values, reviews_author_sum.values, color=c)
+    ax_8.bar(reviews_author_sum.nlargest(top_authors).index.values, reviews_author_sum.nlargest(top_authors).values, color=c)
+    ax_8.axhline(reviews_author_sum.mean(), color='green', linewidth=1)
+    ax_8.text(-0.4, int(reviews_author_sum.mean())+8000, 'mean: ' + str(int(reviews_author_sum.mean())), color='green', backgroundcolor='white')
     ax_8.grid(linestyle='--', axis='y', linewidth=1)
 
     return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8
