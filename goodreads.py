@@ -3,15 +3,12 @@ import requests
 import pandas as pd
 import numpy as np
 import math
-from time import sleep
 import matplotlib.pyplot as plt
 import plotly.express as px
 import streamlit as st
 from streamlit_metrics import metric, metric_row
 from wordcloud import WordCloud, STOPWORDS
-from PIL import Image
 
-import os as o
 
 def bookscraper(url):
 
@@ -166,11 +163,13 @@ def streamlit_template (graphs, data):
     st.sidebar.markdown("<h1 style=' color: #948888;'>BEST DYSTOPIAN & POST-APOCALYPTIC FICTION BOOKS</h1>",
                         unsafe_allow_html=True)
     st.sidebar.write('\n')
+    analysis_type = st.sidebar.radio("What do you need to chose?", ('Author', 'Book'))
+    st.sidebar.write('\n')
     awarded_version = st.sidebar.checkbox("Only awarded books", help=f"We recommend have it unselected to give an oportunity to less known books")
     if awarded_version:
         data = data[data['Awards']>0]
-    st.sidebar.write('\n')
-    analysis_type = st.sidebar.radio("What do you need to chose?", ('Author', 'Book'))
+
+
     if analysis_type == 'Author':
         st.title("BOOKS RECOMMENDER - Selecting author")
         #FILTERS
@@ -183,7 +182,7 @@ def streamlit_template (graphs, data):
             st.markdown(f"<h2 style=' color: #948888;'>A little piece of advice...</h2>", unsafe_allow_html=True)
             st.markdown(
                 f"<ul style=' color: #948888;'><li>It’s a sweet warning: <b>don’t select books just by best rating.</b><br><br>As you can see in the first 2 graphs there are substantial differences of reviews between the books, half of them has less than 100 reviews. Just as an example, you can see that books with top ratings has less number of reviews.</li><br>"
-                f"<li>An other friendly warning: <b>don’t discard author with just one book but check it twice.</b><br><br>From the third graph you can observe that authors with only one book in this list has a wider rating range, it's your choice selecting a new writer or a consolidated one.</li><br>"
+                f"<li>An other friendly warning: <b>don’t discard authors with just one book but check it twice.</b><br><br>From the third graph you can observe that authors with only one book in this list has a wider rating range, it's your choice selecting a new writer or a consolidated one.</li><br>"
                 f"<br><b>¡Now is time to find your next lecture!</b> Go through our application to pick the author and book that fits better with your interests.</ul><br><br>",
                 unsafe_allow_html=True)
             col1, col2, col3 = st.columns(3)
