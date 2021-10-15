@@ -137,6 +137,7 @@ def preprocessing(data):
     data = data[data['original_publish_year'] <= 2021]
     data = data.drop_duplicates(subset=['title'])
     data = data.reset_index(drop=True)
+    data['genres'].fillna("No Genre", inplace = True)
 
     #checking the Author column containing the numerice values count
     authors_must_string = [not(str(author).isnumeric()) for author in data['author']]
@@ -174,7 +175,7 @@ def streamlit_template (graphs, data):
         st.title("BOOKS RECOMMENDER - Selecting author")
         #FILTERS
         year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
-        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=25, step=1, value=10)
+        number_authors = st.sidebar.slider('Number of top authors', min_value=1, max_value=25, step=1, value=10)
         data = data[data['Publication year'] >= year_publication]
         graphs_charts = graphs(data,top_authors=number_authors)
         warning = st.expander(f"IMPORTANT: Read this before you start selecting an author")
@@ -217,7 +218,7 @@ def streamlit_template (graphs, data):
 
     elif analysis_type == 'Book':
         st.title("BOOKS RECOMMENDER - Selecting book")
-        authors = st.sidebar.selectbox("Authors", data['author'])
+        authors = st.sidebar.selectbox("Authors", set(data['author']))
         data = data[data['author'] == authors]
         graphs_charts = graphs(data)
         st.markdown(f"<h1 style=' color: #948888;'>{authors}</h1>", unsafe_allow_html=True)
@@ -255,6 +256,11 @@ def streamlit_template (graphs, data):
             data = data.to_html(escape=False)
             col2.write(data, unsafe_allow_html=True)
             st.write('\n')
+
+        st.markdown(f"<p><br>If this application helps you to find your next book:</p>", unsafe_allow_html=True)
+        book_found = st.button(f"¡Click me!")
+        if book_found:
+            st.balloons()
 
 def transform_format(val):
     if val == 0:
@@ -421,13 +427,13 @@ def graphs(data,transform_format=transform_format,top_authors=5):
 
     boolean_top_authors = (data.author.isin(reviews_author_mean.nlargest(top_authors).index.values) & data.author.isin(reviews_author_sum.nlargest(top_authors).index.values))
     data_graph_3 = data[boolean_top_authors]
-    data_graph_3['all'] = f'Top {int(sum(boolean_top_authors)/2)} authors'
+    data_graph_3['all'] = f'Top authors'
     fig_3 = px.treemap(data_graph_3,
                        path=[data_graph_3['all'], data_graph_3['author'], data_graph_3['Title']],
                        values=data_graph_3['Rating'],
                        color=data_graph_3['Rating'],
                        range_color=[math.floor(data_graph_3['Rating'].min()), math.ceil(data_graph_3['Rating'].max())],
-                       title=f"Top {int(sum(boolean_top_authors)/2)} authors by average&total reviews classified by number of books and book's rating",
+                       title=f"Top authors by average&total reviews classified by number of books and book's rating",
                        width=1400,
                        height=min(int(sum(boolean_top_authors)/2) * 70, 900),
                        color_continuous_scale='YlOrRd'
