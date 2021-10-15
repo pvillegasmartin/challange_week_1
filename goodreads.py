@@ -176,20 +176,22 @@ def streamlit_template (graphs, data):
         graphs_charts = graphs(data,top_authors=number_authors)
         warning = st.expander(f"IMPORTANT: Read this before you start selecting an author")
         with warning:
-            st.markdown(f"<h2 style=' color: #948888;'>FIRST CONSIDERATIONS</h2>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style=' color: #948888;'>A little piece of advice...</h2>", unsafe_allow_html=True)
             st.markdown(
-                f"<ul style=' color: #948888;'><li>It’s a sweet warning: <b>don’t select books just by best rating.</b><br>As you can see in this 3 graphs there are substantial differences of reviews between the books, half of them has less than 100 reviews. Just as an example, you can see the books with top ratings has less number of reviews.</li><br>"
-                f"<li>An other warning: <b>don’t discard author with just one book but check it twice.</b><br>From the third graph you can observe that authors with more publications in this list has a narrowed high rating. For instance, if we take JK Rolling she has only one book in this list, but it has a really top rating which is 9.0.</li><br>"
-                f"<b>¡Now is time to find your next lecture!</b> Go through our application to pick the author and book that fits better with your interests.</ul><br><br>",
+                f"<ul style=' color: #948888;'><li>It’s a sweet warning: <b>don’t select books just by best rating.</b><br><br>As you can see in the first 2 graphs there are substantial differences of reviews between the books, half of them has less than 100 reviews. Just as an example, you can see that books with top ratings has less number of reviews.</li><br>"
+                f"<li>An other friendly warning: <b>don’t discard author with just one book but check it twice.</b><br><br>From the third graph you can observe that authors with only one book in this list has a wider rating range, it's your choice selecting a new writer or a consolidated one.</li><br>"
+                f"<br><b>¡Now is time to find your next lecture!</b> Go through our application to pick the author and book that fits better with your interests.</ul><br><br>",
                 unsafe_allow_html=True)
             col1, col2, col3 = st.columns(3)
             col1.pyplot(graphs_charts[6])
             col2.pyplot(graphs_charts[5])
             col3.pyplot(graphs_charts[9])
 
-        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style=' color: #948888;'>Top authors</h2>", unsafe_allow_html=True)
         st.markdown(
-            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            f"<ul style=' color: #948888;'>Here we present you the top authors by total number of reviews and by average reviews. The Orange bars are the authors which appers in boths graphs.<br><br>"
+            f"The final point we want you to extract from this graphs are:<br><li>First graph explains better which authors has more books in the list</li><li>The second one explains better which author produce more interests in <b>all</b> his/her books</li><br><br>"
+            f"<b>Our suggestion:</b> Select an author that appears in both graphs, it’s going to be a safer decision without discarding new writers. <br><br></ul>",
             unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         col1.pyplot(graphs_charts[8])
@@ -199,8 +201,16 @@ def streamlit_template (graphs, data):
         st.markdown(
             f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
             unsafe_allow_html=True)
-        col1, col2, col3 = st.columns((1, 15, 1))
-        col2.plotly_chart(graphs_charts[3])
+        type_decision = st.radio("Which criteria do you want to use?", ('Total reviews', 'Average reviews', 'Mix (our suggestion)'))
+        if type_decision == "Mix (our suggestion)":
+            col1, col2, col3 = st.columns((1, 15, 1))
+            col2.plotly_chart(graphs_charts[3])
+        elif type_decision == "Average reviews":
+            col1, col2, col3 = st.columns((1, 15, 1))
+            col2.plotly_chart(graphs_charts[10])
+        elif type_decision == "Total reviews":
+            col1, col2, col3 = st.columns((1, 15, 1))
+            col2.plotly_chart(graphs_charts[11])
 
     elif analysis_type == 'Book':
         authors = st.sidebar.selectbox("Authors", data['author'])
@@ -397,15 +407,15 @@ def graphs(data,transform_format=transform_format,top_authors=5):
 
     boolean_top_authors = (data.author.isin(reviews_author_mean.nlargest(top_authors).index.values) & data.author.isin(reviews_author_sum.nlargest(top_authors).index.values))
     data_graph_3 = data[boolean_top_authors]
-    data_graph_3['all'] = f'Top {top_authors} authors'
+    data_graph_3['all'] = f'Top {int(sum(boolean_top_authors)/2)} authors'
     fig_3 = px.treemap(data_graph_3,
                        path=[data_graph_3['all'], data_graph_3['author'], data_graph_3['Title']],
                        values=data_graph_3['Rating'],
                        color=data_graph_3['Rating'],
                        range_color=[math.floor(data_graph_3['Rating'].min()), math.ceil(data_graph_3['Rating'].max())],
-                       title=f"Top {int(sum(boolean_top_authors)/2)} authors by average reviews classified by number of books and book's rating",
+                       title=f"Top {int(sum(boolean_top_authors)/2)} authors by average&total reviews classified by number of books and book's rating",
                        width=1400,
-                       height=min(top_authors * 70, 1000),
+                       height=min(int(sum(boolean_top_authors)/2) * 70, 900),
                        color_continuous_scale='YlOrRd'
 
                        )
@@ -414,7 +424,50 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     # fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
     fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value:.2f}<br><extra></extra>')
 
-    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8,fig_9
+    # GRAPH 10:
+
+    boolean_top_authors_10 = data.author.isin(reviews_author_mean.nlargest(top_authors).index.values)
+    data_graph_10 = data[boolean_top_authors_10]
+    data_graph_10['all'] = f'Top {top_authors} authors'
+    fig_10 = px.treemap(data_graph_10,
+                       path=[data_graph_10['all'], data_graph_10['author'], data_graph_10['Title']],
+                       values=data_graph_10['Rating'],
+                       color=data_graph_10['Rating'],
+                       range_color=[math.floor(data_graph_10['Rating'].min()), math.ceil(data_graph_10['Rating'].max())],
+                       title=f"Top {top_authors} authors by average reviews classified by number of books and book's rating",
+                       width=1400,
+                       height=min(int(sum(boolean_top_authors_10) / 2) * 70, 900),
+                       color_continuous_scale='YlOrRd'
+
+                       )
+    fig_10.layout.font.size = 20
+    fig_10.data[0].textinfo = 'label+value'
+    # fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
+    fig_10.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value:.2f}<br><extra></extra>')
+
+    # GRAPH 11:
+
+    boolean_top_authors_11 = data.author.isin(reviews_author_sum.nlargest(top_authors).index.values)
+    data_graph_11 = data[boolean_top_authors_11]
+    data_graph_11['all'] = f'Top {top_authors} authors'
+    fig_11 = px.treemap(data_graph_11,
+                        path=[data_graph_11['all'], data_graph_11['author'], data_graph_11['Title']],
+                        values=data_graph_11['Rating'],
+                        color=data_graph_11['Rating'],
+                        range_color=[math.floor(data_graph_11['Rating'].min()),
+                                     math.ceil(data_graph_11['Rating'].max())],
+                        title=f"Top {top_authors} authors by total reviews classified by number of books and book's rating",
+                        width=1400,
+                        height=min(int(sum(boolean_top_authors_11) / 2) * 70, 900),
+                                   color_continuous_scale='YlOrRd'
+
+                                   )
+    fig_11.layout.font.size = 20
+    fig_11.data[0].textinfo = 'label+value'
+    # fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
+    fig_11.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value:.2f}<br><extra></extra>')
+
+    return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8,fig_9,fig_10,fig_11
 
 
 if __name__ == "__main__":
