@@ -11,6 +11,8 @@ from streamlit_metrics import metric, metric_row
 from wordcloud import WordCloud, STOPWORDS
 from PIL import Image
 
+import os as o
+
 def bookscraper(url):
 
     '''
@@ -169,6 +171,7 @@ def streamlit_template (graphs, data):
     st.sidebar.write('\n')
     analysis_type = st.sidebar.radio("What do you need to chose?", ('Author', 'Book'))
     if analysis_type == 'Author':
+        st.title("BOOKS RECOMMENDER - Selecting author")
         #FILTERS
         year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
         number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=25, step=1, value=10)
@@ -197,9 +200,9 @@ def streamlit_template (graphs, data):
         col1.pyplot(graphs_charts[8])
         col2.pyplot(graphs_charts[7])
 
-        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style=' color: #948888;'>Author's selection</h2>", unsafe_allow_html=True)
         st.markdown(
-            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
+            f"<p style=' color: #948888;'>Finally, with the help of this graph, you can select the best author based on the options you prefer as we explained before (Total Reviews, Average Reviews or by combining the above in our suggested Mix option).</p>",
             unsafe_allow_html=True)
         type_decision = st.radio("Which criteria do you want to use?", ('Total reviews', 'Average reviews', 'Mix (our suggestion)'))
         if type_decision == "Mix (our suggestion)":
@@ -213,6 +216,7 @@ def streamlit_template (graphs, data):
             col2.plotly_chart(graphs_charts[11])
 
     elif analysis_type == 'Book':
+        st.title("BOOKS RECOMMENDER - Selecting book")
         authors = st.sidebar.selectbox("Authors", data['author'])
         data = data[data['author'] == authors]
         graphs_charts = graphs(data)
@@ -242,16 +246,26 @@ def streamlit_template (graphs, data):
                 f"<p style=' color: #948888;'>In this table you can find all {authors}'s books with some relevant information sorted by rating value.</p>",
                 unsafe_allow_html=True)
 
+
             col1, col2, col3 = st.columns((1, 4, 1))
-            col2.table(data.loc[:, ['Title', 'Series', 'Publication year', 'num_reviews', 'Rating', 'Awards',
-                                    'Nº pages']].set_index(
-                'Title').sort_values('Rating', ascending=False))
+            # link is the column with hyperlinks
+            data = data.loc[:, ['Title', 'Series', 'Publication year', 'num_reviews', 'Rating', 'Awards',
+                                    'Nº pages', 'url']].set_index('Title').sort_values('Rating', ascending=False)
+            data['url'] = data['url'].apply(make_clickable)
+            data = data.to_html(escape=False)
+            col2.write(data, unsafe_allow_html=True)
+            st.write('\n')
 
 def transform_format(val):
     if val == 0:
         return 255
     else:
         return val
+
+def make_clickable(link):
+    # target _blank to open new window
+    # extract clickable text to display for your link
+    return f'<a target="_blank" href="{link}">Link to book</a>'
 
 def graphs(data,transform_format=transform_format,top_authors=5):
 
@@ -355,7 +369,7 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     fig_7 = plt.figure(figsize=(10, 6))
     ax_7 = fig_7.add_subplot(1, 1, 1)
     # set x axis
-    ax_7.set_xlabel("Authors", fontsize=20)
+    #ax_7.set_xlabel("Authors", fontsize=20)
     ax_7.set_xticklabels(reviews_author_mean.nlargest(top_authors).index.values, rotation=30, ha='right')
     # set y axis
     ax_7.set_ylabel("Average reviews", fontsize=20)
@@ -373,7 +387,7 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     fig_8 = plt.figure(figsize=(10, 6))
     ax_8 = fig_8.add_subplot(1, 1, 1)
     # set x axis
-    ax_8.set_xlabel("Authors", fontsize=20)
+    #ax_8.set_xlabel("Authors", fontsize=20)
     ax_8.set_xticklabels(reviews_author_sum.nlargest(top_authors).index.values, rotation=30, ha='right')
     # set y axis
     ax_8.set_ylabel("Total reviews", fontsize=20)
