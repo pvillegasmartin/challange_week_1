@@ -167,34 +167,31 @@ def streamlit_template (graphs, data):
     if awarded_version:
         data = data[data['Awards']>0]
     st.sidebar.write('\n')
-    analysis_type = st.sidebar.radio("SELECT TYPE OF ANALYSIS", ('General', 'Author'))
-    if analysis_type == 'General':
+    analysis_type = st.sidebar.radio("What do you need to chose?", ('Author', 'Book'))
+    if analysis_type == 'Author':
         #FILTERS
         year_publication = st.sidebar.slider('Publication year', min_value=int(min(data['Publication year'])), max_value=int(max(data['Publication year'])), step=1)
-        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=15, step=1, value=10)
+        number_authors = st.sidebar.slider('Number authors', min_value=1, max_value=25, step=1, value=10)
         data = data[data['Publication year'] >= year_publication]
         graphs_charts = graphs(data,top_authors=number_authors)
-        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
-        st.markdown(
-            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
-            unsafe_allow_html=True)
-        col1, col2, col3 = st.beta_columns(3)
-        col2.pyplot(graphs_charts[6])
+        warning = st.expander(f"IMPORTANT: Read this before you start selecting an author")
+        with warning:
+            st.markdown(f"<h2 style=' color: #948888;'>FIRST CONSIDERATIONS</h2>", unsafe_allow_html=True)
+            st.markdown(
+                f"<ul style=' color: #948888;'><li>It’s a sweet warning: <b>don’t select books just by best rating.</b><br>As you can see in this 3 graphs there are substantial differences of reviews between the books, half of them has less than 100 reviews. Just as an example, you can see the books with top ratings has less number of reviews.</li><br>"
+                f"<li>An other warning: <b>don’t discard author with just one book but check it twice.</b><br>From the third graph you can observe that authors with more publications in this list has a narrowed high rating. For instance, if we take JK Rolling she has only one book in this list, but it has a really top rating which is 9.0.</li><br>"
+                f"<b>¡Now is time to find your next lecture!</b> Go through our application to pick the author and book that fits better with your interests.</ul><br><br>",
+                unsafe_allow_html=True)
+            col1, col2, col3 = st.columns(3)
+            col1.pyplot(graphs_charts[6])
+            col2.pyplot(graphs_charts[5])
+            col3.pyplot(graphs_charts[9])
 
         st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
         st.markdown(
             f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
             unsafe_allow_html=True)
-
-        col1, col2 = st.beta_columns(2)
-        col1.pyplot(graphs_charts[5])
-        col2.pyplot(graphs_charts[9])
-
-        st.markdown(f"<h2 style=' color: #948888;'>Cloud of genres</h2>", unsafe_allow_html=True)
-        st.markdown(
-            f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
-            unsafe_allow_html=True)
-        col1, col2 = st.beta_columns(2)
+        col1, col2 = st.columns(2)
         col1.pyplot(graphs_charts[8])
         col2.pyplot(graphs_charts[7])
 
@@ -202,10 +199,10 @@ def streamlit_template (graphs, data):
         st.markdown(
             f"<p style=' color: #948888;'>Fast view of the most important type of genres present in 's books.</p>",
             unsafe_allow_html=True)
-        col1, col2, col3 = st.beta_columns((1, 6, 1))
+        col1, col2, col3 = st.columns((1, 15, 1))
         col2.plotly_chart(graphs_charts[3])
 
-    elif analysis_type == 'Author':
+    elif analysis_type == 'Book':
         authors = st.sidebar.selectbox("Authors", data['author'])
         data = data[data['author'] == authors]
         graphs_charts = graphs(data)
@@ -226,16 +223,16 @@ def streamlit_template (graphs, data):
         ax = fig.add_subplot(1, 1, 1)
         ax.imshow(graphs_charts[0], interpolation='bilinear')
         ax.axis("off")
-        col1, col2, col3 = st.beta_columns((1,2,1))
+        col1, col2, col3 = st.columns((1,2,1))
         col2.pyplot(fig)
-        books = st.checkbox("See books details", help=f"Click me if you want to see {authors}'s books details")
-        if books:
+        books = st.expander(f"See {authors}'s books details")
+        with books:
             st.markdown(f"<h2 style=' color: #948888;'>List of {authors}'s books</h2>", unsafe_allow_html=True)
             st.markdown(
                 f"<p style=' color: #948888;'>In this table you can find all {authors}'s books with some relevant information sorted by rating value.</p>",
                 unsafe_allow_html=True)
 
-            col1, col2, col3 = st.beta_columns((1, 4, 1))
+            col1, col2, col3 = st.columns((1, 4, 1))
             col2.table(data.loc[:, ['Title', 'Series', 'Publication year', 'num_reviews', 'Rating', 'Awards',
                                     'Nº pages']].set_index(
                 'Title').sort_values('Rating', ascending=False))
@@ -306,10 +303,20 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     #for i in range(len(mask)):
     #    transformed_mask[i] = list(map(transform_format, mask[i]))
 
+    def grey_color_func(word=None, font_size=None,
+                            position=None, orientation=None,
+                            font_path=None, random_state=None):
+        # define the list of set colors
+        color_list = [ "#b7c0fd", "#f79a48", "#c69259", "#ffd667", "#f79a48", "#c69259", "#ffd667"]
+
+        # return a random color in the list
+        return np.random.choice(color_list)
+
     word_cloud = WordCloud(width=1600, height=800, background_color="white").generate_from_frequencies(list_genres)
+    word_cloud.recolor(color_func=grey_color_func)
 
     #GRAPH 5: explain we need a minimum of reviews
-    fig_5 = plt.figure(figsize=(10, 6))
+    fig_5 = plt.figure()
     ax_5 = fig_5.add_subplot(1, 1, 1)
     # set x axis
     ax_5.set_xlabel("Number of reviews", fontsize=20)
@@ -333,7 +340,7 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     # GRAPH 7: explain relation of reviews and authors
     reviews_author_mean = data.groupby(data['author'])['num_reviews'].mean()
     reviews_author_sum = data.groupby(data['author'])['num_reviews'].sum()
-    colors = {'both':'green', 'one':'red'}
+    colors = {'both':'#F49A48', 'one':'#F4F2E9'}
 
     fig_7 = plt.figure(figsize=(10, 6))
     ax_7 = fig_7.add_subplot(1, 1, 1)
@@ -350,8 +357,8 @@ def graphs(data,transform_format=transform_format,top_authors=5):
         else:
             c.append(colors['one'])
     ax_7.bar(reviews_author_mean.nlargest(top_authors).index.values, reviews_author_mean.nlargest(top_authors).values, color=c)
-    ax_7.axhline(reviews_author_mean.mean(), color='green', linewidth=1)
-    ax_7.text(-0.40, int(reviews_author_mean.mean())+5000, 'mean: ' + str(int(reviews_author_mean.mean())), color='green', backgroundcolor='white')
+    #ax_7.axhline(reviews_author_mean.mean(), color='green', linewidth=1)
+    #ax_7.text(-0.40, int(reviews_author_mean.mean())+5000, 'mean: ' + str(int(reviews_author_mean.mean())), color='green', backgroundcolor='white')
     ax_7.grid(linestyle='--', axis='y', linewidth=1)
     fig_8 = plt.figure(figsize=(10, 6))
     ax_8 = fig_8.add_subplot(1, 1, 1)
@@ -368,13 +375,13 @@ def graphs(data,transform_format=transform_format,top_authors=5):
         else:
             c.append(colors['one'])
     ax_8.bar(reviews_author_sum.nlargest(top_authors).index.values, reviews_author_sum.nlargest(top_authors).values, color=c)
-    ax_8.axhline(reviews_author_sum.mean(), color='green', linewidth=1)
-    ax_8.text(-0.4, int(reviews_author_sum.mean())+8000, 'mean: ' + str(int(reviews_author_sum.mean())), color='green', backgroundcolor='white')
+    #ax_8.axhline(reviews_author_sum.mean(), color='green', linewidth=1)
+    #ax_8.text(-0.4, int(reviews_author_sum.mean())+8000, 'mean: ' + str(int(reviews_author_sum.mean())), color='green', backgroundcolor='white')
     ax_8.grid(linestyle='--', axis='y', linewidth=1)
 
     # GRAPH 9: explain we need a minimum of reviews
     books_author_sum = pd.concat([data.groupby(data['author'])['Title'].count(),data.groupby(data['author'])['Rating'].mean()],axis=1)
-    fig_9 = plt.figure(figsize=(10, 6))
+    fig_9 = plt.figure()
     ax_9 = fig_9.add_subplot(1, 1, 1)
     # set x axis
     ax_9.set_xlabel("Number of books", fontsize=20)
@@ -387,12 +394,8 @@ def graphs(data,transform_format=transform_format,top_authors=5):
     ax_9.grid(linestyle='--', linewidth=1)
 
     # GRAPH 3:
-    #books_author = data.groupby(data['author'])['Title'].count().nlargest(top_authors)
-    #minmax_rating_author = data.groupby(data['author'])['Rating'].mean()
-    #best_book_author_data = {label: best_author_book(label, data) for label in books_author.index.values}
-    #best_book_author = pd.Series(best_book_author_data, name='best_book')
-    # data_graph_3 = pd.concat([books_author, minmax_rating_author.reindex(books_author.index),best_book_author], axis=1).sort_index()
-    boolean_top_authors = data.author.isin(reviews_author_mean.nlargest(top_authors).index.values)
+
+    boolean_top_authors = (data.author.isin(reviews_author_mean.nlargest(top_authors).index.values) & data.author.isin(reviews_author_sum.nlargest(top_authors).index.values))
     data_graph_3 = data[boolean_top_authors]
     data_graph_3['all'] = f'Top {top_authors} authors'
     fig_3 = px.treemap(data_graph_3,
@@ -400,14 +403,16 @@ def graphs(data,transform_format=transform_format,top_authors=5):
                        values=data_graph_3['Rating'],
                        color=data_graph_3['Rating'],
                        range_color=[math.floor(data_graph_3['Rating'].min()), math.ceil(data_graph_3['Rating'].max())],
-                       title=f"Top {top_authors} authors by average reviews classified by number of books and book's rating",
-                       width=1200,
-                       height=max(top_authors * 70, 600),
-                       template='presentation'
+                       title=f"Top {int(sum(boolean_top_authors)/2)} authors by average reviews classified by number of books and book's rating",
+                       width=1400,
+                       height=min(top_authors * 70, 1000),
+                       color_continuous_scale='YlOrRd'
+
                        )
+    fig_3.layout.font.size = 20
     fig_3.data[0].textinfo = 'label+value'
     # fig_3.data[0].customdata = list(dict(sorted(best_book_author_data.items(), key=lambda x: x[0].lower())).values())
-    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value}<br><extra></extra>')
+    fig_3.update_traces(hovertemplate='<b>Author:</b> %{label}<br><b>Avg rating:</b> %{value:.2f}<br><extra></extra>')
 
     return word_cloud,fig_1,fig_2,fig_3,fig_4,fig_5,fig_6,fig_7,fig_8,fig_9
 
